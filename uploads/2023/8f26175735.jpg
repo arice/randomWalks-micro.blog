@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+
+use GD;
+use Date::Calc qw(:all);
+use CGI qw(:cgi-lib);
+
+&ReadParse;
+
+$day_expectancy = "27806";
+
+if (($birth_year,$birth_month,$birth_day) = Decode_Date_US($in{birthdate})) {
+
+	($death_year, $death_month, $death_day) = Add_Delta_Days($birth_year,$birth_month,$birth_day,$day_expectancy);
+
+	($this_year,$this_month,$this_day) = Today();
+
+	$years = ($death_year - $this_year);
+	$months = ($death_month - $this_month);
+	if ($months < 0) {
+		$years--;
+		$months = ($death_month) + (12 - $this_month);
+	}
+	$days = ($death_day - $this_day);
+	if ($days < 0) {
+		$months--;
+		$days = ($death_day) + (Days_in_Month($death_year,$death_month) - $this_day);
+	}
+	if ($months < 0) {
+		$years--;
+		$months = ($death_month) + (12 - $this_month);
+	}
+	if ($years < 0) {
+		$already_dead = 1;
+	}
+
+} else {
+
+	$years = "err";
+	$months = "err";
+	$days = "err";
+}
+
+$gif = "../images/morty.gif";
+$leftmargin = 80;
+$topmargin = 4;
+$width = 275;
+
+open(GIF,"$gif") || die "Can't open $gif: $!\n";
+$img = newFromGif GD::Image(GIF);
+close(GIF);
+
+$black = $img->colorAllocate(40,40,40);
+$light = $img->colorAllocate(100,100,100);
+$red = $img->colorAllocate(150,0,0);
+
+($w,$h) = (gdSmallFont->width,gdSmallFont->height);
+
+if (! $already_dead) {
+	@strings = ("I have","$years years","$months months","and $days days","to live!");
+} else {
+	@strings = ("I should","","already","","be dead!");
+}
+
+
+$printx  = $leftmargin;
+$printy = $topmargin;
+foreach $string (@strings) {
+	$img->string(gdSmallFont,$printx + 2,$printy + 2,$string,$light);
+	$img->string(gdSmallFont,$printx + 1,$printy + 1,$string,$black);
+	$img->string(gdSmallFont,$printx,$printy,$string,$red);
+	$printy += $h;
+}
+
+print <<EOFILE;
+Content-type: image/gif
+Pragma: no-cache
+Expires: Mon, 28 Apr 1997 00:01:00 -0500
+
+EOFILE
+
+print $img->gif;
+
